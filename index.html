@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billing Dashboard</title>
+<style>
+.viz-root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface-1:#fcfcfb; --border:rgba(11,11,11,0.10);
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --wash:rgba(11,11,11,0.04);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b; --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])) .viz-root{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19; --border:rgba(255,255,255,0.10);
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --wash:rgba(255,255,255,0.05);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
+    --good-text:#0ca30c;
+  }
+}
+:root[data-theme="dark"] .viz-root{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface-1:#1a1a19; --border:rgba(255,255,255,0.10);
+  --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --wash:rgba(255,255,255,0.05);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
+  --good-text:#0ca30c;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body.viz-root{background:var(--page);color:var(--text-primary);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1440px;margin:0 auto;padding:20px 24px 40px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;justify-content:space-between;margin-bottom:14px}
+h1{font-size:20px;font-weight:650;margin:0}
+.subtitle{color:var(--text-secondary);font-size:13px;margin-top:2px}
+.badge-src{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.03em;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:2px;border:1px solid var(--border)}
+.badge-src.sample{background:var(--warning);color:#0b0b0b;border-color:transparent}
+.badge-src.live{color:var(--good-text)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-1)}
+.seg button{border:0;background:transparent;color:var(--text-secondary);padding:7px 14px;font:inherit;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--text-primary);color:var(--surface-1);font-weight:600}
+select,.btn{font:inherit;color:var(--text-primary);background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer}
+label.f{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.health{display:flex;align-items:center;gap:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:16px}
+.health .msg{font-weight:600}
+.health .det{color:var(--text-secondary);font-size:13px}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.ico{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font-size:11px;font-weight:800;color:#fff;flex:none}
+.ico.good{background:var(--good)} .ico.warning{background:var(--warning);color:#0b0b0b}
+.ico.serious{background:var(--serious)} .ico.critical{background:var(--critical)}
+.ico.big{width:28px;height:28px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.card{grid-column:span 6;background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px 12px;min-width:0}
+.card.w12{grid-column:span 12}.card.w8{grid-column:span 8}.card.w4{grid-column:span 4}.card.w3{grid-column:span 3}.card.w2{grid-column:span 2}
+@media (max-width:1100px){.card,.card.w8,.card.w4{grid-column:span 12}.card.w3{grid-column:span 6}.card.w2{grid-column:span 4}}
+@media (max-width:640px){.card.w3,.card.w2{grid-column:span 12}}
+.card>header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.card h3{font-size:14px;font-weight:600;margin:0}
+.card .sub{font-size:12px;color:var(--text-muted);margin:1px 0 0}
+.tbl-toggle{font-size:12px;padding:3px 9px;border-radius:6px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);cursor:pointer;font-family:inherit}
+.card .tableview{display:none;max-height:320px;overflow:auto}
+.card.show-table .tableview{display:block}
+.card.show-table .chart,.card.show-table .legend{display:none}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--text-secondary);margin:2px 0 6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.chart{position:relative;width:100%}
+.chart svg{display:block;overflow:visible}
+.chart text{font-size:11px;fill:var(--text-muted)}
+.chart text.ink{fill:var(--text-primary)} .chart text.ink2{fill:var(--text-secondary)}
+.chart text.tick{font-variant-numeric:tabular-nums}
+.kpi .label{font-size:12px;color:var(--text-secondary)}
+.kpi .value{font-size:30px;font-weight:650;line-height:1.15;margin:4px 0 2px;letter-spacing:-.01em}
+.kpi.small .value{font-size:24px}
+.kpi .foot{font-size:12px;color:var(--text-muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.meter{height:8px;border-radius:4px;background:var(--grid);overflow:hidden;margin:8px 0 4px}
+.meter>span{display:block;height:100%;background:var(--s1);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:600;color:var(--text-secondary);border-bottom:1px solid var(--axis);padding:6px 8px;position:sticky;top:0;background:var(--surface-1)}
+td{padding:6px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.alerts{list-style:none;margin:0;padding:0}
+.alerts li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--grid)}
+.alerts li:last-child{border-bottom:0}
+.alerts .t{font-weight:600}.alerts .d{color:var(--text-secondary);font-size:12.5px}
+.empty{color:var(--text-muted);font-size:13px;padding:18px 0;text-align:center}
+#tip{position:fixed;pointer-events:none;z-index:50;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border);
+  box-shadow:0 4px 18px rgba(0,0,0,.14);border-radius:8px;padding:8px 10px;font-size:12px;min-width:140px;display:none}
+#tip .h{font-weight:600;margin-bottom:4px}
+#tip .r{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums}
+#tip .r i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.view{display:none}.view.on{display:block}
+.loading .grid{opacity:.55;transition:opacity .2s}
+.foot-note{color:var(--text-muted);font-size:12px;margin-top:18px}
+.zone-tag{font-size:11px;color:var(--text-muted)}
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap" id="app">
+  <header class="top">
+    <div>
+      <h1>Billing Dashboard <span id="srcBadge" class="badge-src">…</span></h1>
+      <div class="subtitle" id="subtitle">Loading…</div>
+    </div>
+    <div class="filters" role="toolbar" aria-label="Dashboard filters">
+      <div class="seg" role="group" aria-label="View">
+        <button data-view="exec" aria-pressed="true">Executive</button>
+        <button data-view="ops" aria-pressed="false">IT Operations</button>
+      </div>
+      <label class="f">Application
+        <select id="fApp"><option value="ALL">All applications</option></select>
+      </label>
+      <label class="f">Daily range
+        <select id="fRange">
+          <option value="all">Cycle to date</option>
+          <option value="14">Last 14 days</option>
+          <option value="7">Last 7 days</option>
+        </select>
+      </label>
+      <button class="btn" id="btnRefresh" title="Reload data now">Refresh</button>
+      <button class="btn" id="btnTheme" title="Toggle light / dark">Light / Dark</button>
+    </div>
+  </header>
+
+  <div class="health" id="health" role="status" aria-live="polite"></div>
+
+  <!-- ===================== EXECUTIVE ===================== -->
+  <section class="view on" id="view-exec">
+    <div class="grid">
+      <div class="card w3 kpi" id="k-amount"></div>
+      <div class="card w3 kpi" id="k-count"></div>
+      <div class="card w3 kpi" id="k-success"></div>
+      <div class="card w3 kpi" id="k-members"></div>
+
+      <section class="card w8" id="c-daily">
+        <header><div><h3>Payments completed per day</h3><p class="sub">By application · stacked</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="legend"></div><div class="chart"></div><div class="tableview"></div>
+      </section>
+      <section class="card w4" id="c-byapp">
+        <header><div><h3>Amount collected by application</h3><p class="sub">Selected daily range</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+
+      <section class="card w8" id="c-cumulative">
+        <header><div><h3>Amount collected, cumulative</h3><p class="sub">Selected daily range</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+      <section class="card w4" id="c-successday">
+        <header><div><h3>Payment success rate by day</h3><p class="sub">Completed ÷ (completed + failed)</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ===================== OPERATIONS ===================== -->
+  <section class="view" id="view-ops">
+    <div class="grid">
+      <div class="card w2 kpi small" id="o-done"></div>
+      <div class="card w2 kpi small" id="o-failed"></div>
+      <div class="card w2 kpi small" id="o-rate"></div>
+      <div class="card w2 kpi small" id="o-stuck"></div>
+      <div class="card w2 kpi small" id="o-ping"></div>
+      <div class="card w2 kpi small" id="o-block"></div>
+
+      <section class="card w8" id="c-hourly">
+        <header><div><h3>Hourly payment activity</h3><p class="sub">Last 48 hours · by outcome</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="legend"></div><div class="chart"></div><div class="tableview"></div>
+      </section>
+      <section class="card w4" id="c-alerts">
+        <header><div><h3>Active alerts</h3><p class="sub">Evaluated on every refresh</p></div></header>
+        <ul class="alerts"></ul>
+      </section>
+
+      <section class="card w6" id="c-failures">
+        <header><div><h3>Top failure reasons</h3><p class="sub">Last 24 hours</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+      <section class="card w6" id="c-ping">
+        <header><div><h3>GEORGE linked-server round trip</h3><p class="sub">Last 6 hours · milliseconds</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+
+      <section class="card w6" id="c-nodes">
+        <header><div><h3>DMZ web servers: current sessions</h3><p class="sub">Connections from SFWEBPRD11–14 to Billing_V2</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+      <section class="card w6" id="c-nodetrend">
+        <header><div><h3>Sessions by web server</h3><p class="sub">Last 24 hours · hourly average</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="legend"></div><div class="chart"></div><div class="tableview"></div>
+      </section>
+
+      <section class="card w6" id="c-ag">
+        <header><div><h3>Availability group replicas</h3><p class="sub">Billing_V2 listener SFDBSLISTN01</p></div></header>
+        <div class="tableview" style="display:block"></div>
+      </section>
+      <section class="card w6" id="c-jobs">
+        <header><div><h3>Billing processing jobs</h3><p class="sub">Latest run per job · failures in last 48 h</p></div></header>
+        <div class="tableview" style="display:block"></div>
+      </section>
+
+      <section class="card w6" id="c-waits">
+        <header><div><h3>Top SQL waits</h3><p class="sub">Last hour · total wait time</p></div><button class="tbl-toggle">Table</button></header>
+        <div class="chart"></div><div class="tableview"></div>
+      </section>
+      <section class="card w6" id="c-collect">
+        <header><div><h3>Data collector</h3><p class="sub">Last result of each collection step</p></div></header>
+        <div class="tableview" style="display:block"></div>
+      </section>
+    </div>
+  </section>
+
+  <p class="foot-note" id="footNote"></p>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+(function(){
+"use strict";
+/* ------------------------------------------------------------------ *
+ *  Settings
+ * ------------------------------------------------------------------ */
+const DATA_URL = 'data.json';
+const REFRESH_SEC = 60;
+const STALE_MIN = 10;               // live data older than this raises an alert
+const SLOT = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
+
+const S = { data:null, live:false, view:'exec', app:'ALL', range:'all', err:null };
+
+/* ------------------------------------------------------------------ *
+ *  Helpers
+ * ------------------------------------------------------------------ */
+const $ = (s, r=document) => r.querySelector(s);
+const css = v => getComputedStyle(document.body).getPropertyValue(v).trim();
+const nf0 = new Intl.NumberFormat('en-US');
+const nf1 = new Intl.NumberFormat('en-US',{maximumFractionDigits:1});
+const fmtInt = v => v==null||isNaN(v) ? '–' : nf0.format(Math.round(v));
+const fmtPct = (v,d=1) => v==null||isNaN(v) ? '–' : v.toFixed(d)+'%';
+const fmtMoney = v => {
+  if (v==null||isNaN(v)) return '–';
+  const a = Math.abs(v);
+  if (a >= 1e6) return '$'+nf1.format(v/1e6)+'M';
+  if (a >= 1e4) return '$'+nf1.format(v/1e3)+'K';
+  return '$'+nf0.format(Math.round(v));
+};
+const fmtMoneyFull = v => v==null ? '–' : '$'+nf0.format(Math.round(v));
+const fmtMs = v => v==null ? '–' : (v>=1000 ? nf1.format(v/1000)+' s' : fmtInt(v)+' ms');
+function parseLocal(s){
+  if (!s) return null;
+  const [d,t='00:00:00'] = String(s).split('T');
+  const [y,m,dd] = d.split('-').map(Number);
+  const [hh=0,mi=0,ss=0] = t.split(':').map(parseFloat);
+  return new Date(y, m-1, dd, hh, mi, Math.floor(ss||0));
+}
+const pad = n => String(n).padStart(2,'0');
+const dKey = dt => dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+const hKey = dt => dKey(dt)+'T'+pad(dt.getHours())+':00:00';
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtDay = dt => MON[dt.getMonth()]+' '+dt.getDate();
+const fmtDayW = dt => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()]+' '+fmtDay(dt);
+const fmtHour = dt => pad(dt.getHours())+':00';
+const fmtTime = dt => dt ? pad(dt.getHours())+':'+pad(dt.getMinutes()) : '–';
+const fmtStamp = dt => dt ? fmtDay(dt)+' '+fmtTime(dt) : '–';
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const minutesBetween = (a,b) => Math.round((b-a)/60000);
+
+const ICON = {good:'✓', warning:'!', serious:'▲', critical:'✕'};
+const SEVLABEL = {good:'Normal', warning:'Warning', serious:'Serious', critical:'Critical'};
+const SEVRANK = {good:0, warning:1, serious:2, critical:3};
+const statusHtml = (sev, label) =>
+  `<span class="status"><span class="ico ${sev}" aria-hidden="true">${ICON[sev]}</span>${esc(label ?? SEVLABEL[sev])}</span>`;
+
+/* ------------------------------------------------------------------ *
+ *  Tooltip
+ * ------------------------------------------------------------------ */
+const tip = $('#tip');
+function showTip(html, ev){
+  tip.innerHTML = html; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = x+'px'; tip.style.top = y+'px';
+}
+function hideTip(){ tip.style.display = 'none'; }
+const tipRows = (title, rows) => `<div class="h">${esc(title)}</div>` +
+  rows.map(r => `<div class="r"><span>${r.color?`<i style="background:${r.color}"></i>`:''}${esc(r.name)}</span><b>${esc(r.value)}</b></div>`).join('');
+
+/* ------------------------------------------------------------------ *
+ *  SVG chart primitives
+ * ------------------------------------------------------------------ */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function niceStep(range, count){
+  const raw = range / Math.max(1,count);
+  const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+  const f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+function scaleY(min, max, count=4){
+  if (max <= min) max = min + 1;
+  const step = niceStep(max - min, count);
+  const lo = Math.floor(min/step)*step, hi = Math.ceil(max/step)*step;
+  const ticks = []; for (let v = lo; v <= hi + step/2; v += step) ticks.push(+v.toFixed(6));
+  return {lo, hi, ticks};
+}
+function topRoundedRect(x, y, w, h, r){
+  r = Math.max(0, Math.min(r, w/2, h));
+  return `M${x},${y+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h}Z`;
+}
+function rightRoundedRect(x, y, w, h, r){
+  r = Math.max(0, Math.min(r, h/2, w));
+  return `M${x},${y}H${x+w-r}Q${x+w},${y} ${x+w},${y+r}V${y+h-r}Q${x+w},${y+h} ${x+w-r},${y+h}H${x}Z`;
+}
+function legend(container, items){
+  if (!container) return;
+  container.innerHTML = items.length < 2 ? '' :
+    items.map(i => `<span><i style="background:${i.color}"></i>${esc(i.name)}</span>`).join('');
+}
+function emptyChart(container, msg, h=120){
+  container.innerHTML = `<div class="empty" style="min-height:${h}px">${esc(msg)}</div>`;
+}
+
+/* Stacked vertical bars. series: [{name,color,values[]}] */
+function barChart(container, {labels, series, height=240, fmt=fmtInt, xLabel=i=>labels[i], tipTitle=i=>labels[i], aria}){
+  container.innerHTML = '';
+  const n = labels.length;
+  if (!n) return emptyChart(container, 'No data in this range', height);
+  const W = Math.max(280, container.clientWidth), H = height;
+  const m = {t:10, r:8, b:26, l:50};
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const totals = labels.map((_,i) => series.reduce((a,s) => a + (s.values[i]||0), 0));
+  const sc = scaleY(0, Math.max(1, ...totals));
+  const y = v => m.t + ph - (v - sc.lo) / (sc.hi - sc.lo) * ph;
+  const svg = el('svg', {width:W, height:H, role:'img', 'aria-label':aria||'bar chart'}, container);
+  sc.ticks.forEach(t => {
+    el('line', {x1:m.l, x2:W-m.r, y1:y(t), y2:y(t), stroke: t===0?css('--axis'):css('--grid'), 'stroke-width':1}, svg);
+    el('text', {x:m.l-6, y:y(t)+3.5, 'text-anchor':'end', class:'tick'}, svg).textContent = fmt(t);
+  });
+  const band = pw / n, bw = Math.max(2, Math.min(26, band * 0.72));
+  const every = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(pw / 64))));
+  const hl = el('rect', {y:m.t, height:ph, width:band, fill:css('--wash'), opacity:0}, svg);
+  for (let i = 0; i < n; i++){
+    const cx = m.l + band*i + band/2, x0 = cx - bw/2;
+    let acc = 0;
+    const segs = series.map((s,si) => ({s, v:s.values[i]||0, si})).filter(d => d.v > 0);
+    segs.forEach((d, k) => {
+      const y1 = y(acc), y2 = y(acc + d.v); acc += d.v;
+      let h = y1 - y2 - (k > 0 ? 2 : 0);          // 2px surface gap between segments
+      if (h < 0.5) h = 0.5;
+      const top = k === segs.length - 1;
+      el('path', {d: top ? topRoundedRect(x0, y1 - (k>0?2:0) - h, bw, h, 4) : `M${x0},${y1-(k>0?2:0)-h}h${bw}v${h}h${-bw}Z`, fill:d.s.color}, svg);
+    });
+    if (i % every === 0)
+      el('text', {x:cx, y:H-8, 'text-anchor':'middle'}, svg).textContent = xLabel(i);
+    const hit = el('rect', {x:m.l + band*i, y:m.t, width:band, height:ph, fill:'transparent', tabindex:0}, svg);
+    const show = ev => {
+      hl.setAttribute('x', m.l + band*i); hl.setAttribute('opacity', 1);
+      const rows = series.map(s => ({name:s.name, color:s.color, value:fmt(s.values[i]||0)})).reverse();
+      if (series.length > 1) rows.push({name:'Total', value:fmt(totals[i])});
+      showTip(tipRows(tipTitle(i), rows), ev);
+    };
+    hit.addEventListener('mousemove', show);
+    hit.addEventListener('focus', () => { const b = hit.getBoundingClientRect(); show({clientX:b.x+b.width/2, clientY:b.y+20}); });
+    hit.addEventListener('mouseleave', () => { hl.setAttribute('opacity',0); hideTip(); });
+    hit.addEventListener('blur', () => { hl.setAttribute('opacity',0); hideTip(); });
+  }
+}
+
+/* Multi-series line with crosshair. series: [{name,color,values[] (null = gap)}] */
+function lineChart(container, {labels, series, height=220, fmt=fmtInt, yMin=null, yMax=null,
+                               xLabel=i=>labels[i], tipTitle=i=>labels[i], thresholds=[], directLabels=true, aria}){
+  container.innerHTML = '';
+  const n = labels.length;
+  if (!n) return emptyChart(container, 'No data in this range', height);
+  const W = Math.max(280, container.clientWidth), H = height;
+  const lab = directLabels && series.length > 1 && series.length <= 4;
+  const m = {t:12, r: lab ? 92 : 14, b:26, l:54};
+  const pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const all = series.flatMap(s => s.values).filter(v => v != null);
+  thresholds.forEach(t => all.push(t.value));
+  const sc = scaleY(yMin ?? Math.min(0, ...all), yMax ?? Math.max(1, ...all));
+  const x = i => m.l + (n === 1 ? pw/2 : i * pw/(n-1));
+  const y = v => m.t + ph - (v - sc.lo)/(sc.hi - sc.lo) * ph;
+  const svg = el('svg', {width:W, height:H, role:'img', 'aria-label':aria||'line chart'}, container);
+  sc.ticks.forEach(t => {
+    el('line', {x1:m.l, x2:m.l+pw, y1:y(t), y2:y(t), stroke: t===sc.lo?css('--axis'):css('--grid'), 'stroke-width':1}, svg);
+    el('text', {x:m.l-6, y:y(t)+3.5, 'text-anchor':'end', class:'tick'}, svg).textContent = fmt(t);
+  });
+  thresholds.forEach(t => {
+    el('line', {x1:m.l, x2:m.l+pw, y1:y(t.value), y2:y(t.value), stroke:t.color, 'stroke-width':1.5, 'stroke-dasharray':'5 4'}, svg);
+    el('text', {x:m.l+pw-2, y:y(t.value)-5, 'text-anchor':'end', class:'ink2'}, svg).textContent = t.label;
+  });
+  const every = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(pw / 70))));
+  for (let i = 0; i < n; i += every)
+    el('text', {x:x(i), y:H-8, 'text-anchor':'middle'}, svg).textContent = xLabel(i);
+  const ends = [];
+  series.forEach(s => {
+    let d = '', pen = false, last = null;
+    s.values.forEach((v,i) => {
+      if (v == null){ pen = false; return; }
+      d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); pen = true; last = i;
+    });
+    el('path', {d, fill:'none', stroke:s.color, 'stroke-width':2, 'stroke-linejoin':'round', 'stroke-linecap':'round'}, svg);
+    if (last != null){
+      el('circle', {cx:x(last), cy:y(s.values[last]), r:4, fill:s.color, stroke:css('--surface-1'), 'stroke-width':2}, svg);
+      ends.push({s, yy:y(s.values[last])});
+    }
+  });
+  if (lab){
+    ends.sort((a,b) => a.yy - b.yy);
+    for (let k = 1; k < ends.length; k++) if (ends[k].yy - ends[k-1].yy < 13) ends[k].yy = ends[k-1].yy + 13;
+    ends.forEach(e => el('text', {x:m.l+pw+8, y:e.yy+4, class:'ink2'}, svg).textContent = e.s.name);
+  }
+  const cross = el('line', {y1:m.t, y2:m.t+ph, stroke:css('--axis'), 'stroke-width':1, opacity:0}, svg);
+  const dots = series.map(s => el('circle', {r:4, fill:s.color, stroke:css('--surface-1'), 'stroke-width':2, opacity:0}, svg));
+  const ov = el('rect', {x:m.l, y:m.t, width:pw, height:ph, fill:'transparent', tabindex:0}, svg);
+  let cur = n - 1;
+  const showAt = (i, ev) => {
+    cur = i;
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('opacity', 1);
+    series.forEach((s,k) => {
+      const v = s.values[i];
+      if (v == null) dots[k].setAttribute('opacity', 0);
+      else { dots[k].setAttribute('cx', x(i)); dots[k].setAttribute('cy', y(v)); dots[k].setAttribute('opacity', 1); }
+    });
+    showTip(tipRows(tipTitle(i), series.map(s => ({name:s.name, color:s.color, value: s.values[i]==null?'–':fmt(s.values[i])}))), ev);
+  };
+  ov.addEventListener('mousemove', ev => {
+    const b = svg.getBoundingClientRect();
+    const px = ev.clientX - b.left - m.l;
+    showAt(Math.max(0, Math.min(n-1, Math.round(n === 1 ? 0 : px / (pw/(n-1))))), ev);
+  });
+  const off = () => { cross.setAttribute('opacity',0); dots.forEach(d => d.setAttribute('opacity',0)); hideTip(); };
+  ov.addEventListener('mouseleave', off); ov.addEventListener('blur', off);
+  ov.addEventListener('keydown', ev => {
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    ev.preventDefault();
+    const i = Math.max(0, Math.min(n-1, cur + (ev.key === 'ArrowRight' ? 1 : -1)));
+    const b = svg.getBoundingClientRect();
+    showAt(i, {clientX: b.left + x(i), clientY: b.top + m.t + 10});
+  });
+}
+
+/* Horizontal ranked bars. rows: [{label, value, color, note}] */
+function hbarChart(container, rows, {fmt=fmtInt, labelW=170, aria, tip:tipFn}={}){
+  container.innerHTML = '';
+  if (!rows.length) return emptyChart(container, 'Nothing to show', 80);
+  const W = Math.max(280, container.clientWidth), rh = 30;
+  const H = rows.length * rh + 6;
+  const lw = Math.min(labelW, W * 0.42), vw = 70;
+  const pw = W - lw - vw;
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const svg = el('svg', {width:W, height:H, role:'img', 'aria-label':aria||'bar chart'}, container);
+  el('line', {x1:lw, x2:lw, y1:0, y2:H-4, stroke:css('--axis'), 'stroke-width':1}, svg);
+  rows.forEach((r, i) => {
+    const yy = i * rh + 5, bh = 18, w = Math.max(2, r.value / max * pw);
+    const t = el('text', {x:lw-8, y:yy+bh/2+4, 'text-anchor':'end', class:'ink'}, svg);
+    const mx = Math.floor((lw - 12) / 6.4); t.textContent = r.label.length > mx ? r.label.slice(0, mx-1)+'…' : r.label;
+    el('path', {d:rightRoundedRect(lw, yy, w, bh, 4), fill:r.color}, svg);
+    el('text', {x:lw + w + 6, y:yy+bh/2+4, class:'ink2 tick'}, svg).textContent = fmt(r.value);
+    const hit = el('rect', {x:0, y:yy-4, width:W, height:rh, fill:'transparent', tabindex:0}, svg);
+    const html = tipFn ? tipFn(r) : tipRows(r.label, [{name:'Value', value:fmt(r.value)}]);
+    hit.addEventListener('mousemove', ev => showTip(html, ev));
+    hit.addEventListener('focus', () => { const b = hit.getBoundingClientRect(); showTip(html, {clientX:b.x+lw, clientY:b.y}); });
+    hit.addEventListener('mouseleave', hideTip); hit.addEventListener('blur', hideTip);
+  });
+}
+
+function table(container, cols, rows){
+  if (!container) return;
+  if (!rows.length){ container.innerHTML = '<div class="empty">No rows</div>'; return; }
+  container.innerHTML = '<table><thead><tr>' +
+    cols.map(c => `<th class="${c.num?'num':''}">${esc(c.h)}</th>`).join('') + '</tr></thead><tbody>' +
+    rows.map(r => '<tr>' + cols.map(c => {
+      const v = c.f ? c.f(r) : r[c.k];
+      return `<td class="${c.num?'num':''}">${c.html ? v : esc(v)}</td>`;
+    }).join('') + '</tr>').join('') + '</tbody></table>';
+}
+
+function kpi(id, {label, value, foot='', meter=null}){
+  const e = document.getElementById(id);
+  e.innerHTML = `<div class="label">${esc(label)}</div><div class="value">${value}</div>` +
+    (meter != null ? `<div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${meter.toFixed(1)}"><span style="width:${Math.min(100,meter)}%"></span></div>` : '') +
+    `<div class="foot">${foot}</div>`;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Derivations (all respect the Application filter)
+ * ------------------------------------------------------------------ */
+function appList(){
+  const d = S.data, known = (d.apps||[]).map(a => a.code);
+  const seen = new Set([...(d.daily||[]).map(r => r.app), ...(d.hourly||[]).map(r => r.app)]);
+  const list = (d.apps||[]).filter(a => seen.has(a.code));
+  seen.forEach(c => { if (!known.includes(c)) list.push({code:c, name:c}); });
+  return list;
+}
+function appColor(code){
+  const idx = (S.data.apps||[]).findIndex(a => a.code === code);
+  const all = appList().map(a => a.code);
+  const i = idx >= 0 ? idx : (S.data.apps||[]).length + all.indexOf(code);
+  return css(SLOT[Math.min(i, 7)]);
+}
+const appName = code => ((S.data.apps||[]).find(a => a.code === code) || {name:code}).name;
+const pick = rows => S.app === 'ALL' ? rows : rows.filter(r => r.app === S.app);
+
+function dailyDays(){
+  const d = S.data;
+  const start = parseLocal(d.meta.inCycle ? d.meta.cycleStart : d.meta.windowStart);
+  const now = parseLocal(d.meta.generatedAt);
+  const days = [];
+  for (let t = new Date(start); t <= now; t.setDate(t.getDate()+1)) days.push(dKey(t));
+  const n = S.range === 'all' ? days.length : Math.min(days.length, +S.range);
+  return days.slice(days.length - n);
+}
+function hourSlots(){
+  const now = parseLocal(S.data.meta.generatedAt);
+  const cur = new Date(now); cur.setMinutes(0,0,0);
+  const out = [];
+  for (let k = 47; k >= 0; k--){ const t = new Date(cur); t.setHours(cur.getHours()-k); out.push(hKey(t)); }
+  return out;
+}
+function sumBy(rows, keyFn, fields){
+  const m = new Map();
+  rows.forEach(r => {
+    const k = keyFn(r); let o = m.get(k);
+    if (!o){ o = {}; fields.forEach(f => o[f] = 0); m.set(k, o); }
+    fields.forEach(f => o[f] += +r[f] || 0);
+  });
+  return m;
+}
+
+function computeAlerts(){
+  const d = S.data, th = d.thresholds || {}, A = [];
+  const now = parseLocal(d.meta.generatedAt);
+  // staleness (live only)
+  if (S.live){
+    const age = minutesBetween(now, new Date());
+    if (age > STALE_MIN) A.push({sev:'serious', t:'Dashboard data is stale', d:`Last export ${age} minutes ago. Check the SQL Agent job "billingdashboard - Collect".`});
+  }
+  // failure rate, previous full hour
+  const slots = hourSlots(), prev = slots[slots.length-2];
+  const hr = pick(d.hourly||[]).filter(r => r.h === prev);
+  const c = hr.reduce((a,r)=>a+r.completed,0), f = hr.reduce((a,r)=>a+r.failed,0);
+  const rate = c+f ? f/(c+f)*100 : 0;
+  if (c+f >= 20 && rate >= (th.failRateCritPct??15)) A.push({sev:'critical', t:`Failure rate ${fmtPct(rate)} in the last full hour`, d:`${fmtInt(f)} failed of ${fmtInt(c+f)} attempts (${fmtHour(parseLocal(prev))}). See top failure reasons.`});
+  else if (c+f >= 20 && rate >= (th.failRateWarnPct??5)) A.push({sev:'warning', t:`Failure rate ${fmtPct(rate)} in the last full hour`, d:`${fmtInt(f)} failed of ${fmtInt(c+f)} attempts.`});
+  // stuck pending
+  pick(d.stuck||[]).forEach(s => A.push({sev:'serious', t:`${fmtInt(s.count)} payment${s.count>1?'s':''} stuck in pending: ${appName(s.app)}`,
+      d:`Oldest has waited ${fmtInt(s.oldestMinutes)} min (threshold ${th.stuckPendingMinutes??30}). Possible missed gateway postback or session lost on return.`}));
+  // linked server
+  const pings = d.ping||[], lp = pings[pings.length-1];
+  if (lp && !lp.ok) A.push({sev:'critical', t:'GEORGE linked server is not responding', d: lp.err || 'Ping query failed.'});
+  else if (lp && lp.ms >= (th.pingCritMs??2000)) A.push({sev:'critical', t:`GEORGE round trip ${fmtMs(lp.ms)}`, d:'Linked-server latency above the critical threshold.'});
+  else if (lp && lp.ms >= (th.pingWarnMs??500)) A.push({sev:'warning', t:`GEORGE round trip ${fmtMs(lp.ms)}`, d:'Linked-server latency above the warning threshold.'});
+  // AG
+  (d.ag||[]).forEach(r => {
+    if (r.health && r.health !== 'HEALTHY') A.push({sev:'critical', t:`AG replica ${r.replica} is ${r.health}`, d:`${r.ag} · ${r.db} · ${r.syncState}`});
+    else if ((r.redoKb||0) >= (th.redoQueueWarnKb??102400)) A.push({sev:'warning', t:`Redo queue ${fmtInt(r.redoKb/1024)} MB on ${r.replica}`, d:`${r.ag} · ${r.db}`});
+  });
+  // blocking
+  const inst = d.instance;
+  if (inst && inst.blocked > 0 && inst.longestBlockSec >= (th.blockWarnSec??30))
+    A.push({sev:'warning', t:`${inst.blocked} blocked session${inst.blocked>1?'s':''}`, d:`Longest wait ${inst.longestBlockSec}s on ${d.meta.server}.`});
+  // jobs: latest run failed
+  latestJobs().forEach(j => { if (j.status === 'Failed') A.push({sev:'serious', t:`Job failed: ${j.name}`, d:`${fmtStamp(parseLocal(j.start))} · ${j.message||'No message'}`}); });
+  // collector
+  (d.meta.collect||[]).forEach(s => { if (s.status === 'ERROR') A.push({sev:'warning', t:`Collector step "${s.step}" failed`, d:s.message||''}); });
+  return A.sort((a,b) => SEVRANK[b.sev]-SEVRANK[a.sev]);
+}
+function latestJobs(){
+  const m = new Map();
+  (S.data.jobs||[]).forEach(j => {
+    const k = j.source+'|'+j.name, cur = m.get(k);
+    if (!cur) m.set(k, {...j, fails:0, runs:0});
+    const o = m.get(k);
+    o.runs++; if (j.status === 'Failed') o.fails++;
+    if (parseLocal(j.start) > parseLocal(o.start)) Object.assign(o, {start:j.start, end:j.end, status:j.status, rows:j.rows, message:j.message});
+  });
+  return [...m.values()].sort((a,b) => a.name.localeCompare(b.name));
+}
+
+/* ------------------------------------------------------------------ *
+ *  Render
+ * ------------------------------------------------------------------ */
+function render(){
+  const d = S.data; if (!d) return;
+  const now = parseLocal(d.meta.generatedAt);
+  $('#srcBadge').textContent = S.live ? 'LIVE' : 'SAMPLE DATA';
+  $('#srcBadge').className = 'badge-src ' + (S.live ? 'live' : 'sample');
+  const cs = parseLocal(d.meta.cycleStart), ce = parseLocal(d.meta.cycleEnd);
+  $('#subtitle').textContent = `GEORGE online payments · cycle ${fmtDay(cs)} – ${fmtDay(ce)}, ${ce.getFullYear()}` +
+    (d.meta.inCycle ? '' : ' (outside cycle: showing last 60 days)') + ` · data as of ${fmtStamp(now)} PT`;
+  $('#footNote').textContent = (S.live ? `Source: ${d.meta.server} · Billing_V2.billingdashboard (Online Payment Service tables + GEORGE BMMASTP) · refreshes every ${REFRESH_SEC}s.`
+    : 'Showing generated SAMPLE data: data.json was not found next to this page. Deploy the SQL scripts and exporter to switch to live data.') +
+    (S.err ? ' Last load error: ' + S.err : '');
+
+  // app filter options (keep selection)
+  const sel = $('#fApp'), apps = appList();
+  const want = ['ALL', ...apps.map(a => a.code)].join('|');
+  if (sel.dataset.k !== want){
+    sel.innerHTML = '<option value="ALL">All applications</option>' + apps.map(a => `<option value="${esc(a.code)}">${esc(a.name)}</option>`).join('');
+    sel.dataset.k = want; sel.value = apps.some(a => a.code === S.app) ? S.app : 'ALL'; S.app = sel.value;
+  }
+
+  // health banner
+  const alerts = computeAlerts();
+  const worst = alerts.length ? alerts[0].sev : 'good';
+  const msg = !alerts.length ? 'All payment systems normal'
+    : worst === 'critical' ? 'Payment processing is impaired'
+    : `${alerts.length} issue${alerts.length>1?'s':''} need${alerts.length>1?'':'s'} attention`;
+  $('#health').innerHTML = `<span class="ico big ${worst}" aria-hidden="true">${ICON[worst]}</span>
+    <div><div class="msg">${esc(msg)}</div><div class="det">${alerts.length ? esc(alerts.slice(0,2).map(a=>a.t).join(' · ')) + (alerts.length>2?` · +${alerts.length-2} more`:'') + ' — see IT Operations view' : 'No active alerts across payments, jobs, GEORGE link and SQL availability groups.'}</div></div>`;
+
+  if (S.view === 'exec') renderExec(now); else renderOps(now, alerts);
+}
+
+function renderExec(now){
+  const d = S.data, days = dailyDays(), daySet = new Set(days);
+  const daily = pick(d.daily||[]).filter(r => daySet.has(r.d));
+  const todayK = dKey(now);
+  const tot = daily.reduce((a,r)=>({c:a.c+r.completed, f:a.f+r.failed, amt:a.amt+r.amount}), {c:0,f:0,amt:0});
+  const today = daily.filter(r => r.d === todayK).reduce((a,r)=>({c:a.c+r.completed, f:a.f+r.failed, amt:a.amt+r.amount}), {c:0,f:0,amt:0});
+  const rangeLbl = S.range === 'all' ? (d.meta.inCycle ? 'cycle to date' : 'last 60 days') : `last ${S.range} days`;
+
+  kpi('k-amount', {label:`Amount collected · ${rangeLbl}`, value:fmtMoney(tot.amt), foot:`${fmtMoneyFull(today.amt)} today`});
+  kpi('k-count',  {label:`Payments completed · ${rangeLbl}`, value:fmtInt(tot.c), foot:`${fmtInt(today.c)} today · ${fmtInt(tot.f)} failed in range`});
+  const sr = today.c+today.f ? today.c/(today.c+today.f)*100 : null;
+  const srRange = tot.c+tot.f ? tot.c/(tot.c+tot.f)*100 : null;
+  const th = d.thresholds||{};
+  const sev = sr == null ? 'good' : (100-sr) >= (th.failRateCritPct??15) ? 'critical' : (100-sr) >= (th.failRateWarnPct??5) ? 'warning' : 'good';
+  kpi('k-success', {label:'Payment success rate · today', value:fmtPct(sr), foot: statusHtml(sev) + ` <span>${fmtPct(srRange)} over ${rangeLbl}</span>`});
+  const p = d.progress;
+  if (p && p.membersBilled){
+    const pct = p.membersPaid / p.membersBilled * 100;
+    kpi('k-members', {label:'Members paid · all channels', value:fmtPct(pct), meter:pct,
+      foot:`${fmtInt(p.membersPaid)} of ${fmtInt(p.membersBilled)} billed · ${fmtMoney(p.amountPaid)} of ${fmtMoney(p.amountBilled)}`});
+  } else kpi('k-members', {label:'Members paid', value:'–', foot:'Configure GeorgeProgressQuery (BMMASTP) in billingdashboard.Config'});
+
+  // daily stacked by app
+  const apps = appList().filter(a => S.app === 'ALL' || a.code === S.app);
+  const byDayApp = sumBy(daily, r => r.d+'|'+r.app, ['completed','failed','amount']);
+  const series = apps.map(a => ({name:a.name, color:appColor(a.code), values: days.map(k => (byDayApp.get(k+'|'+a.code)||{}).completed||0)}));
+  const c1 = $('#c-daily');
+  legend($('.legend', c1), series);
+  const dl = days.map(parseLocal);
+  barChart($('.chart', c1), {labels:days, series, height:260, xLabel:i=>fmtDay(dl[i]), tipTitle:i=>fmtDayW(dl[i]) + (days[i]===todayK?' (so far)':''), aria:'Payments completed per day by application'});
+  const byDay = sumBy(daily, r => r.d, ['completed','failed','amount']);
+  table($('.tableview', c1), [{h:'Date', f:r=>fmtDayW(parseLocal(r.d))}, ...apps.map(a => ({h:a.name, num:true, f:r=>fmtInt((byDayApp.get(r.d+'|'+a.code)||{}).completed||0)})), {h:'Total', num:true, f:r=>fmtInt((byDay.get(r.d)||{}).completed||0)}],
+        days.slice().reverse().map(k => ({d:k})));
+
+  // by app
+  const byApp = sumBy(daily, r => r.app, ['completed','failed','amount']);
+  const rows = apps.map(a => ({label:a.name, code:a.code, value:(byApp.get(a.code)||{}).amount||0, color:appColor(a.code), ...(byApp.get(a.code)||{completed:0,failed:0})}))
+                   .sort((a,b) => b.value - a.value);
+  const c2 = $('#c-byapp');
+  hbarChart($('.chart', c2), rows, {fmt:fmtMoney, labelW:150, aria:'Amount collected by application',
+    tip:r => tipRows(r.label, [{name:'Collected', value:fmtMoneyFull(r.value)}, {name:'Completed', value:fmtInt(r.completed)}, {name:'Failed', value:fmtInt(r.failed)}])});
+  table($('.tableview', c2), [{h:'Application', k:'label'}, {h:'Completed', num:true, f:r=>fmtInt(r.completed)}, {h:'Failed', num:true, f:r=>fmtInt(r.failed)}, {h:'Collected', num:true, f:r=>fmtMoneyFull(r.value)}], rows);
+
+  // cumulative amount
+  let run = 0;
+  const cum = days.map(k => (run += (byDay.get(k)||{}).amount||0));
+  const c3 = $('#c-cumulative');
+  lineChart($('.chart', c3), {labels:days, series:[{name:'Collected', color:css('--s1'), values:cum}], height:230, fmt:fmtMoney,
+    xLabel:i=>fmtDay(dl[i]), tipTitle:i=>fmtDayW(dl[i]), aria:'Cumulative amount collected'});
+  table($('.tableview', c3), [{h:'Date', f:r=>fmtDayW(parseLocal(r.d))}, {h:'Collected that day', num:true, f:r=>fmtMoneyFull(r.amt)}, {h:'Cumulative', num:true, f:r=>fmtMoneyFull(r.cum)}],
+        days.map((k,i) => ({d:k, amt:(byDay.get(k)||{}).amount||0, cum:cum[i]})).reverse());
+
+  // success by day
+  const rate = days.map(k => { const o = byDay.get(k); return o && (o.completed+o.failed) ? o.completed/(o.completed+o.failed)*100 : null; });
+  const minR = Math.min(90, ...rate.filter(v => v != null)) ;
+  const c4 = $('#c-successday');
+  lineChart($('.chart', c4), {labels:days, series:[{name:'Success rate', color:css('--s1'), values:rate}], height:230,
+    fmt:v=>fmtPct(v, v % 1 ? 1 : 0), yMin:Math.floor(minR/5)*5, yMax:100, xLabel:i=>fmtDay(dl[i]), tipTitle:i=>fmtDayW(dl[i]),
+    thresholds:[{value:100-(th.failRateWarnPct??5), label:`Target ${100-(th.failRateWarnPct??5)}%`, color:css('--text-muted')}], aria:'Daily payment success rate'});
+  table($('.tableview', c4), [{h:'Date', f:r=>fmtDayW(parseLocal(r.d))}, {h:'Completed', num:true, f:r=>fmtInt(r.c)}, {h:'Failed', num:true, f:r=>fmtInt(r.f)}, {h:'Success rate', num:true, f:r=>fmtPct(r.r)}],
+        days.map((k,i) => ({d:k, c:(byDay.get(k)||{}).completed||0, f:(byDay.get(k)||{}).failed||0, r:rate[i]})).reverse());
+}
+
+function renderOps(now, alerts){
+  const d = S.data, th = d.thresholds||{};
+  const slots = hourSlots(), sl = slots.map(parseLocal);
+  const hourly = pick(d.hourly||[]);
+  const byH = sumBy(hourly, r => r.h, ['completed','failed','pending','cancelled','amount']);
+  const prevK = slots[slots.length-2], pv = byH.get(prevK) || {completed:0, failed:0, pending:0};
+  const rate = pv.completed+pv.failed ? pv.failed/(pv.completed+pv.failed)*100 : 0;
+  const rsev = (pv.completed+pv.failed) < 20 ? 'good' : rate >= (th.failRateCritPct??15) ? 'critical' : rate >= (th.failRateWarnPct??5) ? 'warning' : 'good';
+  const hrLbl = `${fmtHour(parseLocal(prevK))}–${fmtHour(parseLocal(slots[slots.length-1]))}`;
+  kpi('o-done',   {label:'Completed · last full hour', value:fmtInt(pv.completed), foot:hrLbl});
+  kpi('o-failed', {label:'Failed · last full hour', value:fmtInt(pv.failed), foot:hrLbl});
+  kpi('o-rate',   {label:'Failure rate · last full hour', value:fmtPct(rate), foot:statusHtml(rsev)});
+  const stuck = pick(d.stuck||[]), sc = stuck.reduce((a,s)=>a+s.count,0), so = Math.max(0, ...stuck.map(s=>s.oldestMinutes));
+  kpi('o-stuck',  {label:`Stuck pending > ${th.stuckPendingMinutes??30} min`, value:fmtInt(sc), foot: sc ? statusHtml('serious', `oldest ${so} min`) : statusHtml('good')});
+  const pings = d.ping||[], lp = pings[pings.length-1];
+  const psev = !lp ? 'warning' : !lp.ok ? 'critical' : lp.ms >= (th.pingCritMs??2000) ? 'critical' : lp.ms >= (th.pingWarnMs??500) ? 'warning' : 'good';
+  kpi('o-ping',   {label:'GEORGE round trip · latest', value: lp ? (lp.ok ? fmtMs(lp.ms) : 'Down') : '–', foot:statusHtml(psev, lp ? fmtTime(parseLocal(lp.ts)) : 'no data')});
+  const inst = d.instance || {};
+  const bsev = inst.blocked > 0 && inst.longestBlockSec >= (th.blockWarnSec??30) ? 'warning' : 'good';
+  kpi('o-block',  {label:'Blocked SQL sessions', value:fmtInt(inst.blocked??null), foot:statusHtml(bsev, inst.blocked ? `longest ${inst.longestBlockSec}s` : 'none')});
+
+  // hourly stacked by outcome
+  const ser = [
+    {name:'Completed', color:css('--s1'), values:slots.map(k => (byH.get(k)||{}).completed||0)},
+    {name:'Pending',   color:css('--s4'), values:slots.map(k => (byH.get(k)||{}).pending||0)},
+    {name:'Failed',    color:css('--critical'), values:slots.map(k => (byH.get(k)||{}).failed||0)}];
+  const c1 = $('#c-hourly');
+  legend($('.legend', c1), ser);
+  barChart($('.chart', c1), {labels:slots, series:ser, height:260,
+    xLabel:i => sl[i].getHours() === 0 ? fmtDay(sl[i]) : fmtHour(sl[i]),
+    tipTitle:i => fmtDayW(sl[i]) + ' ' + fmtHour(sl[i]) + (i === slots.length-1 ? ' (in progress)' : ''), aria:'Hourly payments by outcome, last 48 hours'});
+  table($('.tableview', c1), [{h:'Hour', f:r=>fmtDayW(parseLocal(r.k))+' '+fmtHour(parseLocal(r.k))}, {h:'Completed', num:true, f:r=>fmtInt(r.completed)}, {h:'Pending', num:true, f:r=>fmtInt(r.pending)}, {h:'Failed', num:true, f:r=>fmtInt(r.failed)}, {h:'Fail %', num:true, f:r=>r.completed+r.failed?fmtPct(r.failed/(r.completed+r.failed)*100):'–'}, {h:'Amount', num:true, f:r=>fmtMoneyFull(r.amount)}],
+        slots.slice().reverse().map(k => ({k, ...(byH.get(k)||{completed:0,failed:0,pending:0,amount:0})})));
+
+  // alerts list
+  $('#c-alerts .alerts').innerHTML = alerts.length ? alerts.map(a => `<li><span class="ico ${a.sev}" aria-hidden="true">${ICON[a.sev]}</span><div><div class="t">${esc(a.t)} <span class="zone-tag">${SEVLABEL[a.sev]}</span></div><div class="d">${esc(a.d)}</div></div></li>`).join('')
+    : `<li><span class="ico good" aria-hidden="true">${ICON.good}</span><div><div class="t">No active alerts</div><div class="d">All checks within thresholds.</div></div></li>`;
+
+  // failures
+  const fm = new Map();
+  pick(d.failures||[]).forEach(f => { const o = fm.get(f.code) || {code:f.code, text:f.text, count:0, apps:new Map(), last:null}; o.count += f.count; o.apps.set(f.app, (o.apps.get(f.app)||0)+f.count); if (!o.last || parseLocal(f.lastSeen) > o.last) o.last = parseLocal(f.lastSeen); fm.set(f.code, o); });
+  const frows = [...fm.values()].sort((a,b)=>b.count-a.count).slice(0,8)
+     .map(o => ({label:o.text ? `${o.text}` : o.code, code:o.code, value:o.count, color:css('--s1'), apps:o.apps, last:o.last}));
+  const c2 = $('#c-failures');
+  hbarChart($('.chart', c2), frows, {labelW:220, aria:'Top failure reasons, last 24 hours',
+    tip:r => tipRows(`${r.label}`, [{name:'Code', value:r.code}, {name:'Failures', value:fmtInt(r.value)}, ...[...r.apps].map(([a,v]) => ({name:appName(a), value:fmtInt(v)})), {name:'Last seen', value:fmtStamp(r.last)}])});
+  table($('.tableview', c2), [{h:'Code', k:'code'}, {h:'Reason', k:'label'}, {h:'Failures', num:true, f:r=>fmtInt(r.value)}, {h:'Last seen', f:r=>fmtStamp(r.last)}], frows);
+
+  // ping
+  const c3 = $('#c-ping'), pl = pings.map(p => parseLocal(p.ts));
+  lineChart($('.chart', c3), {labels:pings.map(p=>p.ts), series:[{name:'Round trip', color:css('--s1'), values:pings.map(p => p.ok ? p.ms : null)}],
+    height:230, fmt:v=>fmtInt(v), yMin:0, xLabel:i=>fmtTime(pl[i]), tipTitle:i=>fmtStamp(pl[i]),
+    thresholds:[{value:th.pingWarnMs??500, label:`Warning ${th.pingWarnMs??500} ms`, color:css('--text-muted')}], aria:'GEORGE linked server round-trip time'});
+  table($('.tableview', c3), [{h:'Time', f:r=>fmtStamp(parseLocal(r.ts))}, {h:'Result', html:true, f:r=>r.ok?statusHtml('good','OK'):statusHtml('critical','Failed')}, {h:'ms', num:true, f:r=>fmtInt(r.ms)}, {h:'Error', f:r=>r.err||''}], pings.slice().reverse());
+
+  // web nodes
+  const nodes = new Map();
+  (d.webNodes||[]).forEach(w => { const o = nodes.get(w.host) || {host:w.host, zone:w.zone, sessions:0, active:0, programs:[]}; o.sessions += w.sessions; o.active += w.active; o.programs.push(w); nodes.set(w.host, o); });
+  const hostsAll = ['SFWEBPRD11','SFWEBPRD12','SFWEBPRD13','SFWEBPRD14'];
+  [...nodes.keys()].forEach(h => { if (!hostsAll.includes(h)) hostsAll.push(h); });
+  const zoneOf = h => (nodes.get(h)||{}).zone || (h === 'SFWEBPRD14' ? 'South Central' : 'Western');
+  const hostColor = h => css(SLOT[Math.min(hostsAll.indexOf(h), 7)]);
+  const nrows = hostsAll.map(h => ({label:`${h} · ${zoneOf(h)}`, host:h, zone:zoneOf(h), value:(nodes.get(h)||{}).sessions||0, active:(nodes.get(h)||{}).active||0, programs:(nodes.get(h)||{}).programs||[], color:hostColor(h)}));
+  const zt = {}; nrows.forEach(r => zt[r.zone] = (zt[r.zone]||0) + r.value);
+  const totalS = Object.values(zt).reduce((a,b)=>a+b,0);
+  const c4 = $('#c-nodes');
+  $('.sub', c4).textContent = 'Connections from SFWEBPRD11–14 to Billing_V2 · ' + Object.entries(zt).map(([z,v]) => `${z} ${totalS?Math.round(v/totalS*100):0}%`).join(' · ');
+  hbarChart($('.chart', c4), nrows, {labelW:200, aria:'Current sessions per DMZ web server',
+    tip:r => tipRows(r.host + ' (' + r.zone + ')', [{name:'Sessions', value:fmtInt(r.value)}, {name:'Active requests', value:fmtInt(r.active)}, ...r.programs.map(p => ({name:p.program, value:fmtInt(p.sessions)}))])});
+  table($('.tableview', c4), [{h:'Server', k:'host'}, {h:'Zone', k:'zone'}, {h:'Sessions', num:true, f:r=>fmtInt(r.value)}, {h:'Active', num:true, f:r=>fmtInt(r.active)}, {h:'Programs', f:r=>r.programs.map(p=>`${p.program} (${p.sessions})`).join(', ')}], nrows);
+
+  // node trend
+  const nh = d.nodeHourly||[];
+  const hrs = [...new Set(nh.map(r => r.h))].sort();
+  const hl = hrs.map(parseLocal);
+  const nm = new Map(nh.map(r => [r.h+'|'+r.host, r.sessions]));
+  const hosts = hostsAll.filter(h => nh.some(r => r.host === h));
+  const nser = hosts.map(h => ({name:h, color:hostColor(h), values:hrs.map(k => nm.get(k+'|'+h) ?? null)}));
+  const c5 = $('#c-nodetrend');
+  legend($('.legend', c5), nser);
+  lineChart($('.chart', c5), {labels:hrs, series:nser, height:230, yMin:0, xLabel:i=>fmtHour(hl[i]), tipTitle:i=>fmtDayW(hl[i])+' '+fmtHour(hl[i]), aria:'Sessions per web server, last 24 hours'});
+  table($('.tableview', c5), [{h:'Hour', f:r=>fmtDayW(parseLocal(r.k))+' '+fmtHour(parseLocal(r.k))}, ...hosts.map(h => ({h, num:true, f:r=>fmtInt(nm.get(r.k+'|'+h))}))], hrs.slice().reverse().map(k=>({k})));
+
+  // AG
+  table($('#c-ag .tableview'), [
+    {h:'Replica', f:r=>r.replica}, {h:'Role', f:r=>r.role||''}, {h:'Mode', f:r=>(r.mode||'').replace('_COMMIT','').toLowerCase()},
+    {h:'State', html:true, f:r=>statusHtml(r.health==='HEALTHY'?((r.redoKb||0)>=(th.redoQueueWarnKb??102400)?'warning':'good'):'critical', (r.syncState||'').toLowerCase())},
+    {h:'Send queue', num:true, f:r=>fmtInt(r.logSendKb)+' KB'}, {h:'Redo queue', num:true, f:r=>fmtInt(r.redoKb)+' KB'}], d.ag||[]);
+
+  // jobs
+  table($('#c-jobs .tableview'), [
+    {h:'Job', f:r=>r.name}, {h:'Status', html:true, f:r=>statusHtml(r.status==='Failed'?'serious':r.status==='Running'?'warning':'good', r.status)},
+    {h:'Last start', f:r=>fmtStamp(parseLocal(r.start))},
+    {h:'Duration', num:true, f:r=>r.end ? (()=>{const s=(parseLocal(r.end)-parseLocal(r.start))/1000; return s>=60?nf1.format(s/60)+' min':Math.round(s)+' s';})() : '–'},
+    {h:'Rows', num:true, f:r=>fmtInt(r.rows)}, {h:'Failures 48h', num:true, f:r=>`${r.fails} / ${r.runs}`}], latestJobs());
+
+  // waits
+  const wrows = (d.waits||[]).map(w => ({label:w.wait, value:w.ms/1000, color:css('--s1')}));
+  const c6 = $('#c-waits');
+  hbarChart($('.chart', c6), wrows, {fmt:v=>fmtInt(v)+' s', labelW:190, aria:'Top SQL waits last hour'});
+  table($('.tableview', c6), [{h:'Wait type', k:'label'}, {h:'Seconds', num:true, f:r=>fmtInt(r.value)}], wrows);
+
+  // collector
+  table($('#c-collect .tableview'), [{h:'Step', k:'step'}, {h:'Result', html:true, f:r=>statusHtml(r.status==='OK'?'good':r.status==='SKIP'?'warning':'serious', r.status)},
+    {h:'When', f:r=>fmtStamp(parseLocal(r.ts))}, {h:'ms', num:true, f:r=>fmtInt(r.durationMs)}, {h:'Message', f:r=>r.message||''}], d.meta.collect||[]);
+}
+
+/* ------------------------------------------------------------------ *
+ *  Sample data (used when data.json is not reachable)
+ * ------------------------------------------------------------------ */
+function sampleData(){
+  let seed = 20270120;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const jit = (v, p) => v * (1 + (rnd()*2-1)*p);
+  const now = new Date(2027, 0, 20, 14, 37, 0);
+  const iso = dt => dKey(dt)+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes())+':00';
+  const apps = [{code:'MSBP',name:'My State Bar Profile'},{code:'AGB',name:'Agency Billing'},{code:'COS',name:'Certificate of Standing'},{code:'CRS',name:'Course Registration'}];
+  const share = {MSBP:.74, AGB:.10, COS:.10, CRS:.06}, avg = {MSBP:510, AGB:1450, COS:30, CRS:85};
+  const prof = [0.4,0.25,0.15,0.1,0.1,0.2,0.6,1.5,3.5,6,7,7.2,6.5,6.8,7,6.6,6,5,4.2,3.8,3.5,3,2,1.1];
+  const ps = prof.reduce((a,b)=>a+b,0);
+  const start = new Date(2027,0,1);
+  const hourlyAll = [], daily = new Map();
+  const failCodes = [['CARD_DECLINED','Card declined by issuer',.45],['AVS_MISMATCH','Address verification failed',.2],['GW_TIMEOUT','Payment gateway timeout',.12],
+                     ['SESSION_LOST','Session expired on return to profile',.1],['DUP_SUBMIT','Duplicate submission blocked',.08],['POST_GEORGE','Posting to GEORGE failed',.05]];
+  const failures = new Map();
+  for (let t = new Date(start); t <= now; t.setHours(t.getHours()+1)){
+    const di = Math.floor((t - start)/86400000), dow = t.getDay();
+    let dayTot = di === 0 ? 900 : 1500 + 5200*Math.exp(-(di-1)/3.5);
+    dayTot += di >= 10 ? (di-10)*120 : 0;
+    if (dow === 0 || dow === 6) dayTot *= 0.45;
+    const isNow = t.getDate() === now.getDate() && t.getHours() === now.getHours();
+    const frac = isNow ? now.getMinutes()/60 : 1;
+    const spike = t.getDate() === 20 && t.getHours() === 11;
+    apps.forEach(a => {
+      const vol = Math.max(0, jit(dayTot * prof[t.getHours()]/ps * share[a.code], .18) * frac);
+      const fr = spike ? .14 : jit(.022, .35);
+      const failed = Math.round(vol * fr), completed = Math.round(vol - failed);
+      const pending = Math.round(vol * (isNow ? .05 : jit(.004,.6)));
+      const amount = completed * jit(avg[a.code], .05);
+      const h = hKey(t);
+      hourlyAll.push({h, app:a.code, completed, failed, pending, cancelled:Math.round(vol*.01), amount:Math.round(amount*100)/100});
+      const dk = dKey(t)+'|'+a.code, o = daily.get(dk) || {d:dKey(t), app:a.code, completed:0, failed:0, amount:0};
+      o.completed += completed; o.failed += failed; o.amount += amount; daily.set(dk, o);
+      if ((now - t) / 3600000 < 24 && failed){
+        let left = failed;
+        failCodes.forEach(([code, text, w], k) => {
+          let c = k === 0 ? Math.max(0, failed - failCodes.slice(1).reduce((a,[cd,,ww]) => a + Math.round(failed * (spike && cd==='GW_TIMEOUT' ? .7 : spike ? ww*.3 : ww)), 0))
+                          : Math.round(failed * (spike && code==='GW_TIMEOUT' ? .7 : spike ? w*.3 : w));
+          c = Math.min(c, left); left -= c; if (!c) return;
+          const key = a.code+'|'+code, f = failures.get(key) || {app:a.code, code, text, count:0, lastSeen:null};
+          f.count += c; f.lastSeen = iso(new Date(t.getTime()+ 40*60000 > now ? now : t.getTime()+40*60000)); failures.set(key, f);
+        });
+      }
+    });
+  }
+  const cutoff = new Date(now); cutoff.setMinutes(0,0,0); cutoff.setHours(cutoff.getHours()-47);
+  const hourly = hourlyAll.filter(r => parseLocal(r.h) >= cutoff);
+  const dailyArr = [...daily.values()].map(o => ({...o, amount:Math.round(o.amount*100)/100}));
+  const msbp = dailyArr.filter(r=>r.app==='MSBP').reduce((a,r)=>a+r.completed,0), agb = dailyArr.filter(r=>r.app==='AGB').reduce((a,r)=>a+r.completed,0);
+  const paidAmt = dailyArr.filter(r=>r.app==='MSBP'||r.app==='AGB').reduce((a,r)=>a+r.amount,0);
+  const billed = 196500;
+  // web nodes
+  const nodeBase = {SFWEBPRD11:[96,58], SFWEBPRD12:[91,61], SFWEBPRD13:[99,64], SFWEBPRD14:[38,22]};
+  const webNodes = [], nodeHourly = [];
+  Object.entries(nodeBase).forEach(([h,[a,b]]) => {
+    const zone = h === 'SFWEBPRD14' ? 'South Central' : 'Western';
+    webNodes.push({host:h, zone, program:'MyStateBarProfile', db:'Billing_V2', sessions:a, active:Math.round(a*.08)});
+    webNodes.push({host:h, zone, program:'OnlinePaymentService', db:'Billing_V2', sessions:b, active:Math.round(b*.1)});
+    for (let k = 23; k >= 0; k--){ const t = new Date(now); t.setMinutes(0,0,0); t.setHours(t.getHours()-k);
+      nodeHourly.push({h:hKey(t), host:h, sessions:Math.round(jit((a+b) * (0.25 + prof[t.getHours()]/7.2*0.75), .08))}); }
+  });
+  // ping every 5 min, 6h
+  const ping = [];
+  for (let k = 72; k >= 0; k--){ const t = new Date(now.getTime() - k*5*60000);
+    const inSpike = t.getHours() === 11 && t.getMinutes() < 45 && t.getDate() === 20;
+    ping.push({ts:iso(t), ms:Math.round(inSpike ? jit(720,.3) : jit(48,.35)), ok:true, err:null}); }
+  // jobs
+  const jobs = []; const addJob = (name, everyMin, durS, rowsF, failAt) => {
+    for (let t = new Date(now.getTime() - 48*3600000); t <= now; t = new Date(t.getTime() + everyMin*60000)){
+      const st = new Date(Math.floor(t.getTime()/ (everyMin*60000)) * everyMin*60000);
+      if (st > now) break;
+      const failed = failAt && failAt(st);
+      jobs.push({source:'AppLog', name, start:iso(st), end:iso(new Date(st.getTime()+jit(durS,.3)*1000)), status: failed ? 'Failed' : 'Succeeded', rows: failed ? 0 : Math.round(rowsF(st)), message: failed ? 'SMTP send timeout after 3 retries (mail relay)' : 'OK'});
+    }};
+  addJob('OnlinePaymentPosting', 15, 95, st => jit(160*prof[st.getHours()]/7,.2));
+  addJob('GatewaySettlementImport', 60, 210, st => jit(600*prof[st.getHours()]/7,.2));
+  addJob('ReceiptEmailer', 30, 60, st => jit(300*prof[st.getHours()]/7,.2), st => st.getDate()===20 && st.getHours()===14 && st.getMinutes()===30);
+  addJob('NightlyReconciliation', 1440, 1260, () => 4200);
+  jobs.sort((a,b) => b.start.localeCompare(a.start));
+  return {
+    meta:{generatedAt:iso(now), cycleStart:'2027-01-01', cycleEnd:'2027-02-28', inCycle:true, windowStart:'2027-01-01', server:'SFDBSLISTN01 (sample)', lastCollect:iso(now),
+          collect:[{step:'Txn',status:'OK',ts:iso(now),durationMs:1840,message:'Read 2,914 rows since 2027-01-20 08:37'},{step:'Progress',status:'OK',ts:iso(new Date(now-17*60000)),durationMs:5210,message:null},
+                   {step:'Jobs',status:'OK',ts:iso(now),durationMs:120,message:null},{step:'SqlHealth',status:'OK',ts:iso(now),durationMs:95,message:null}]},
+    thresholds:{failRateWarnPct:5, failRateCritPct:15, stuckPendingMinutes:30, pingWarnMs:500, pingCritMs:2000, redoQueueWarnKb:102400, blockWarnSec:30},
+    apps, hourly, daily:dailyArr,
+    stuck:[{app:'MSBP', count:7, oldestMinutes:52},{app:'AGB', count:1, oldestMinutes:34}],
+    failures:[...failures.values()].sort((a,b)=>b.count-a.count),
+    progress:{snapTs:iso(new Date(now-17*60000)), membersBilled:billed, membersPaid:Math.min(billed, Math.round(msbp*.98 + agb*3.2)), amountBilled:billed*560, amountPaid:Math.round(paidAmt)},
+    webNodes, nodeHourly, ping,
+    ag:[{ag:'AG_BILLING', replica:'PRD-SQL-N1', db:'Billing_V2', role:'PRIMARY', mode:'SYNCHRONOUS_COMMIT', syncState:'SYNCHRONIZED', health:'HEALTHY', logSendKb:0, redoKb:0},
+        {ag:'AG_BILLING', replica:'PRD-SQL-N2', db:'Billing_V2', role:'SECONDARY', mode:'SYNCHRONOUS_COMMIT', syncState:'SYNCHRONIZED', health:'HEALTHY', logSendKb:0, redoKb:12},
+        {ag:'AG_BILLING', replica:'DR-SQL-N1', db:'Billing_V2', role:'SECONDARY', mode:'ASYNCHRONOUS_COMMIT', syncState:'SYNCHRONIZING', health:'HEALTHY', logSendKb:240, redoKb:3100},
+        {ag:'AG_BILLING', replica:'DR-SQL-N2', db:'Billing_V2', role:'SECONDARY', mode:'ASYNCHRONOUS_COMMIT', syncState:'SYNCHRONIZING', health:'HEALTHY', logSendKb:260, redoKb:2800}],
+    instance:{snapTs:iso(now), activeRequests:14, blocked:0, longestBlockSec:0},
+    jobs,
+    waits:[{wait:'OLEDB',ms:1820000},{wait:'PAGEIOLATCH_SH',ms:640000},{wait:'WRITELOG',ms:410000},{wait:'HADR_SYNC_COMMIT',ms:380000},
+           {wait:'CXPACKET',ms:300000},{wait:'ASYNC_NETWORK_IO',ms:210000},{wait:'LCK_M_U',ms:95000},{wait:'SOS_SCHEDULER_YIELD',ms:80000}]
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ *  Load / wire-up
+ * ------------------------------------------------------------------ */
+async function load(){
+  document.getElementById('app').classList.add('loading');
+  try {
+    if (location.protocol === 'file:') throw new Error('opened from disk');
+    const r = await fetch(DATA_URL + '?t=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    S.data = await r.json(); S.live = true; S.err = null;
+  } catch (e) {
+    if (!S.live){ S.data = sampleData(); S.err = null; }
+    else S.err = e.message;            // keep last good live data, flag the error
+  }
+  document.getElementById('app').classList.remove('loading');
+  render();
+}
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  S.view = b.dataset.view;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  document.getElementById('view-exec').classList.toggle('on', S.view === 'exec');
+  document.getElementById('view-ops').classList.toggle('on', S.view === 'ops');
+  try { localStorage.setItem('bcm.view', S.view); } catch(e){}
+  render();
+}));
+$('#fApp').addEventListener('change', e => { S.app = e.target.value; render(); });
+$('#fRange').addEventListener('change', e => { S.range = e.target.value; render(); });
+$('#btnRefresh').addEventListener('click', load);
+$('#btnTheme').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('bcm.theme', next); } catch(e){}
+  render();
+});
+document.addEventListener('click', e => {
+  if (!e.target.classList.contains('tbl-toggle')) return;
+  const card = e.target.closest('.card');
+  card.classList.toggle('show-table');
+  e.target.textContent = card.classList.contains('show-table') ? 'Chart' : 'Table';
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+try {
+  const t = localStorage.getItem('bcm.theme'); if (t) document.documentElement.setAttribute('data-theme', t);
+  const v = localStorage.getItem('bcm.view'); if (v === 'ops') document.querySelector('.seg button[data-view="ops"]').click();
+} catch(e){}
+load();
+setInterval(load, REFRESH_SEC * 1000);
+})();
+</script>
+</body>
+</html>
